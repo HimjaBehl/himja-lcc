@@ -590,6 +590,197 @@ function handleBottleneck() {
   const q = encodeURIComponent(prompts[val] || 'Help me get unstuck right now.');
   window.open('https://claude.ai/new?q=' + q, '_blank');
 }
+
+/* ── PERSISTENCE ENGINE ── saves everything to localStorage ── */
+const SAVE_KEY = 'himja_lcc_v1';
+
+function getState() {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch(e) { return {}; }
+}
+
+function saveState(patch) {
+  const s = getState();
+  Object.assign(s, patch);
+  localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+}
+
+function saveAll() {
+  const s = {};
+
+  // checkboxes — save by id or generated key
+  document.querySelectorAll('input[type=checkbox]').forEach((cb, i) => {
+    const key = cb.id || ('cb_' + i);
+    if (!cb.id) cb.dataset.cbIdx = i;
+    s['cb_' + (cb.id || i)] = cb.checked;
+  });
+
+  // textareas
+  document.querySelectorAll('textarea').forEach((ta, i) => {
+    const key = ta.id || ('ta_' + i);
+    s['ta_' + (ta.id || i)] = ta.value;
+  });
+
+  // selects (pipeline stages)
+  document.querySelectorAll('select').forEach((sel, i) => {
+    s['sel_' + (sel.id || i)] = sel.value;
+  });
+
+  // number/text/date inputs
+  document.querySelectorAll('input[type=number], input[type=text], input[type=date]').forEach((inp, i) => {
+    s['inp_' + (inp.id || i)] = inp.value;
+  });
+
+  // health displayed values
+  ['weight-out','hba1c-out','doc-out'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) s['display_' + id] = el.textContent;
+  });
+
+  // counter values
+  ['apps-home'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !isNaN(parseInt(el.textContent))) s['counter_' + id] = el.textContent;
+  });
+
+  // mood
+  const selMood = document.querySelector('.mood-btn.sel');
+  if (selMood) s['mood'] = selMood.textContent;
+
+  // extra companies (dynamic)
+  const extraCos = [];
+  document.querySelectorAll('#extra-companies .app-row').forEach(row => {
+    const name = row.querySelector('.app-name') ? row.querySelector('.app-name').textContent : '';
+    const stage = row.querySelector('select') ? row.querySelector('select').value : 'Researching';
+    if (name) extraCos.push({ name, stage });
+  });
+  s['extra_companies'] = JSON.stringify(extraCos);
+
+  // extra WOW tasks (dynamic)
+  const extraWow = [];
+  document.querySelectorAll('#extra-wow-tasks .task').forEach(row => {
+    const txt = row.querySelector('.task-text') ? row.querySelector('.task-text').textContent : '';
+    const checked = row.querySelector('input[type=checkbox]') ? row.querySelector('input[type=checkbox]').checked : false;
+    if (txt) extraWow.push({ txt, checked });
+  });
+  s['extra_wow_tasks'] = JSON.stringify(extraWow);
+
+  // pipeline badge stages
+  ['uh','hm','sf','hx','ms'].forEach(prefix => {
+    const el = document.getElementById(prefix + '-stage');
+    if (el) s['stage_' + prefix] = el.textContent;
+    const sel = document.querySelector(`select[onchange*="'${prefix}'"]`);
+    if (sel) s['stagesel_' + prefix] = sel.value;
+  });
+
+  localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+}
+
+function restoreAll() {
+  const s = getState();
+  if (!Object.keys(s).length) return;
+
+  // restore extra companies first (so their checkboxes get indexed correctly)
+  try {
+    const cos = JSON.parse(s['extra_companies'] || '[]');
+    cos.forEach(({ name, stage }) => {
+      const key = name.replace(/\s/g,'').toLowerCase().substring(0,5) + Date.now();
+      const row = document.createElement('div');
+      row.className = 'app-row';
+      row.innerHTML = `<span class="app-name">${name}</span><select onchange="updateStage(this,'${key}')"><option>Researching</option><option>Drafting</option><option>Applied</option><option>Followed up</option><option>Interview</option><option>Offer</option></select><span class="badge b-blue" id="${key}-stage">Researching</span>`;
+      document.getElementById('extra-companies').appendChild(row);
+      const sel = row.querySelector('select');
+      if (sel) { sel.value = stage; updateStage(sel, key); }
+    });
+  } catch(e) {}
+
+  // restore extra WOW tasks
+  try {
+    const tasks = JSON.parse(s['extra_wow_tasks'] || '[]');
+    tasks.forEach(({ txt, checked }) => {
+      const div = document.createElement('div');
+      div.className = 'task';
+      div.innerHTML = `<input type="checkbox" onchange="updateWow()" style="margin-top:3px;flex-shrink:0;cursor:pointer;accent-color:var(--purple);width:15px;height:15px"><div><div class="task-text">${txt}</div></div>`;
+      document.getElementById('extra-wow-tasks').appendChild(div);
+      if (checked) div.querySelector('input').checked = true;
+    });
+  } catch(e) {}
+
+  // checkboxes
+  document.querySelectorAll('input[type=checkbox]').forEach((cb, i) => {
+    const key = 'cb_' + (cb.id || i);
+    if (s[key] !== undefined) cb.checked = s[key];
+  });
+
+  // textareas
+  document.querySelectorAll('textarea').forEach((ta, i) => {
+    const key = 'ta_' + (ta.id || i);
+    if (s[key] !== undefined) ta.value = s[key];
+  });
+
+  // selects
+  document.querySelectorAll('select').forEach((sel, i) => {
+    const key = 'sel_' + (sel.id || i);
+    if (s[key] !== undefined) sel.value = s[key];
+  });
+
+  // text/number/date inputs
+  document.querySelectorAll('input[type=number], input[type=text], input[type=date]').forEach((inp, i) => {
+    const key = 'inp_' + (inp.id || i);
+    if (s[key] !== undefined) inp.value = s[key];
+  });
+
+  // displayed health values
+  ['weight-out','hba1c-out','doc-out'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && s['display_' + id]) el.textContent = s['display_' + id];
+  });
+
+  // counters
+  ['apps-home'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && s['counter_' + id]) el.textContent = s['counter_' + id];
+  });
+
+  // mood
+  if (s['mood']) {
+    document.querySelectorAll('.mood-btn').forEach(b => {
+      if (b.textContent === s['mood']) { b.classList.add('sel'); document.getElementById('mood-home').textContent = s['mood']; }
+    });
+  }
+
+  // pipeline stages
+  ['uh','hm','sf','hx','ms'].forEach(prefix => {
+    const sel = document.querySelector(`select[onchange*="'${prefix}'"]`);
+    if (sel && s['stagesel_' + prefix]) { sel.value = s['stagesel_' + prefix]; updateStage(sel, prefix); }
+  });
+
+  // recompute derived displays
+  updateFocus();
+  updateWow();
+}
+
+// Auto-save on any interaction
+document.addEventListener('change', saveAll);
+document.addEventListener('input', saveAll);
+document.addEventListener('click', () => setTimeout(saveAll, 100));
+
+// Restore on load
+window.addEventListener('DOMContentLoaded', restoreAll);
+
+// Save indicator
+function showSaved() {
+  let ind = document.getElementById('save-ind');
+  if (!ind) {
+    ind = document.createElement('div');
+    ind.id = 'save-ind';
+    ind.style.cssText = 'position:fixed;bottom:16px;right:16px;background:#1A1A18;color:#fff;font-size:12px;padding:6px 14px;border-radius:20px;opacity:0;transition:opacity .3s;z-index:9999;font-family:DM Sans,sans-serif';
+    ind.textContent = 'Saved';
+    document.body.appendChild(ind);
+  }
+  ind.style.opacity = '1';
+  setTimeout(() => ind.style.opacity = '0', 1200);
+}
+document.addEventListener('change', showSaved);
 </script>
 </body>
 </html>
