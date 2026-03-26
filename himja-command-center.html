@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Himja — Life Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F6F2;
+    --surface: #FFFFFF;
+    --surface2: #F1EFE8;
+    --border: rgba(0,0,0,0.09);
+    --border-strong: rgba(0,0,0,0.18);
+    --text: #1A1A18;
+    --text2: #6B6B66;
+    --text3: #A3A39E;
+    --purple: #7F77DD;
+    --purple-bg: #EEEDFE;
+    --purple-text: #3C3489;
+    --teal: #1D9E75;
+    --teal-bg: #E1F5EE;
+    --teal-text: #085041;
+    --amber: #EF9F27;
+    --amber-bg: #FAEEDA;
+    --amber-text: #854F0B;
+    --red-bg: #FCEBEB;
+    --red-text: #A32D2D;
+    --blue-bg: #E6F1FB;
+    --blue-text: #185FA5;
+    --pink-bg: #FBEAF0;
+    --pink-text: #72243E;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  
+  /* Layout */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--surface); border-right: 0.5px solid var(--border); padding: 1.5rem 1rem; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .main { flex: 1; padding: 2rem; overflow-y: auto; max-width: 780px; }
+  
+  /* Sidebar */
+  .logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); margin-bottom: 4px; }
+  .logo-sub { font-size: 11px; color: var(--text3); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 1.75rem; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; color: var(--text2); margin-bottom: 2px; transition: all .15s; border: none; background: none; width: 100%; text-align: left; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--text); color: #fff; }
+  .nav-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .season-box { margin-top: auto; margin-top: 2rem; padding: 10px 12px; background: var(--purple-bg); border-radius: var(--radius-sm); font-size: 12px; color: var(--purple-text); line-height: 1.5; }
+  .season-label { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 3px; opacity: .7; }
+
+  /* Sections */
+  .section { display: none; }
+  .section.active { display: block; }
+  .page-title { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--text); margin-bottom: 4px; }
+  .page-sub { font-size: 14px; color: var(--text2); margin-bottom: 1.75rem; }
+
+  /* Cards */
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; }
+  .card-sm { background: var(--surface2); border-radius: var(--radius-sm); padding: .85rem 1rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .slabel { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin: 1.4rem 0 .65rem; }
+  .card-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+  .card-val { font-size: 24px; font-weight: 500; color: var(--text); }
+
+  /* Progress */
+  .pbar { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin: 6px 0 8px; }
+  .pfill { height: 100%; border-radius: 2px; transition: width .3s; }
+
+  /* Tasks */
+  .task { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+  .task:last-child { border-bottom: none; }
+  .task input[type=checkbox] { margin-top: 3px; flex-shrink: 0; cursor: pointer; accent-color: var(--purple); width: 15px; height: 15px; }
+  .task-text { font-size: 14px; color: var(--text); line-height: 1.45; }
+  .task-meta { font-size: 12px; color: var(--text3); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  /* Badges */
+  .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .b-red { background: var(--red-bg); color: var(--red-text); }
+  .b-amber { background: var(--amber-bg); color: var(--amber-text); }
+  .b-green { background: var(--teal-bg); color: var(--teal-text); }
+  .b-blue { background: var(--blue-bg); color: var(--blue-text); }
+  .b-purple { background: var(--purple-bg); color: var(--purple-text); }
+  .b-pink { background: var(--pink-bg); color: var(--pink-text); }
+
+  /* Buttons */
+  .btn { padding: 8px 16px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .12s; }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary { background: var(--text); color: #fff; border-color: transparent; }
+  .btn-primary:hover { opacity: .85; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* App pipeline */
+  .app-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 14px; }
+  .app-row:last-child { border-bottom: none; }
+  .app-name { flex: 1; font-weight: 500; }
+
+  /* Quote block */
+  .identity-quote { border-left: 3px solid var(--purple); padding: .85rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--surface2); font-size: 14px; color: var(--text); line-height: 1.65; margin: 8px 0; font-style: italic; }
+
+  /* Mood */
+  .mood-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 10px 0; }
+  .mood-btn { padding: 10px 4px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: var(--surface2); cursor: pointer; text-align: center; font-size: 13px; color: var(--text2); font-family: 'DM Sans', sans-serif; transition: all .12s; }
+  .mood-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .mood-btn.sel { background: var(--text); color: #fff; border-color: transparent; }
+
+  /* Textarea */
+  .textarea { width: 100%; min-height: 80px; padding: 10px 12px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); background: var(--surface); resize: vertical; margin: 8px 0; outline: none; }
+  .textarea:focus { border-color: var(--purple); }
+
+  /* Select */
+  select { padding: 8px 10px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--surface); cursor: pointer; outline: none; }
+
+  /* Input */
+  input[type=text], input[type=number], input[type=date] { padding: 7px 10px; border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); background: var(--surface); outline: none; width: 90px; }
+  input:focus { border-color: var(--purple); }
+
+  /* Pills */
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .pill { font-size: 12px; padding: 4px 12px; border-radius: 20px; border: 0.5px solid var(--border-strong); color: var(--text2); background: var(--surface); }
+  .pill.on { background: var(--text); color: #fff; border-color: transparent; }
+
+  /* Health row */
+  .health-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 14px; }
+  .health-row:last-child { border-bottom: none; }
+
+  /* Time block */
+  .time-block { display: flex; gap: 10px; align-items: stretch; margin: 4px 0; }
+  .time-lbl { font-size: 12px; color: var(--text3); width: 68px; flex-shrink: 0; padding-top: 10px; }
+  .time-item { flex: 1; padding: 9px 13px; border-radius: var(--radius-sm); font-size: 13px; color: var(--text); border: 0.5px solid var(--border); background: var(--surface); }
+
+  /* Sprint */
+  .sprint-item { font-size: 13px; color: var(--text2); padding: 5px 0; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .sprint-item:last-child { border-bottom: none; }
+
+  /* Horizon */
+  .horizon-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: .9rem 1.1rem; }
+  .hz-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+  .hz-val { font-size: 14px; color: var(--text); line-height: 1.4; }
+
+  /* Mobile */
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .main { padding: 1rem; }
+    .grid2, .grid3, .grid4 { grid-template-columns: 1fr; }
+    .mood-grid { grid-template-columns: repeat(3,1fr); }
+  }
+  .mobile-nav { display: none; }
+  @media (max-width: 700px) {
+    .mobile-nav { display: flex; gap: 6px; overflow-x: auto; padding: .75rem 1rem; background: var(--surface); border-bottom: 0.5px solid var(--border); margin-bottom: 1rem; }
+    .mobile-nav button { flex-shrink: 0; padding: 6px 13px; border-radius: 20px; border: 0.5px solid var(--border-strong); background: none; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; color: var(--text2); }
+    .mobile-nav button.active { background: var(--text); color: #fff; border-color: transparent; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">Himja</div>
+    <div class="logo-sub">Life Command Center</div>
+    <button class="nav-item active" onclick="showTab('home')"><span class="nav-dot" style="background:#7F77DD"></span>Home</button>
+    <button class="nav-item" onclick="showTab('career')"><span class="nav-dot" style="background:#E24B4A"></span>Career</button>
+    <button class="nav-item" onclick="showTab('wow')"><span class="nav-dot" style="background:#1D9E75"></span>WOW app</button>
+    <button class="nav-item" onclick="showTab('projects')"><span class="nav-dot" style="background:#EF9F27"></span>Projects</button>
+    <button class="nav-item" onclick="showTab('health')"><span class="nav-dot" style="background:#D4537E"></span>Health</button>
+    <button class="nav-item" onclick="showTab('emotional')"><span class="nav-dot" style="background:#378ADD"></span>Emotional</button>
+    <button class="nav-item" onclick="showTab('identity')"><span class="nav-dot" style="background:#534AB7"></span>Identity</button>
+    <button class="nav-item" onclick="showTab('routine')"><span class="nav-dot" style="background:#639922"></span>Daily routine</button>
+    <button class="nav-item" onclick="showTab('review')"><span class="nav-dot" style="background:#888780"></span>Weekly review</button>
+    <div class="season-box">
+      <div class="season-label">Current season</div>
+      Land the role + ship WOW
+    </div>
+  </aside>
+
+  <div style="flex:1;overflow:hidden;">
+    <!-- Mobile nav -->
+    <div class="mobile-nav" id="mobile-nav">
+      <button class="active" onclick="showTab('home')">Home</button>
+      <button onclick="showTab('career')">Career</button>
+      <button onclick="showTab('wow')">WOW</button>
+      <button onclick="showTab('projects')">Projects</button>
+      <button onclick="showTab('health')">Health</button>
+      <button onclick="showTab('emotional')">Emotional</button>
+      <button onclick="showTab('identity')">Identity</button>
+      <button onclick="showTab('routine')">Routine</button>
+      <button onclick="showTab('review')">Review</button>
+    </div>
+
+    <main class="main">
+
+      <!-- HOME -->
+      <div id="home" class="section active">
+        <div class="page-title">Hey Himja.</div>
+        <div class="page-sub">Builder. Founder-energy. Delhi → everywhere.</div>
+
+        <div class="grid4" style="margin-bottom:14px">
+          <div class="card-sm"><div class="card-label">Focus score</div><div class="card-val" id="focus-val">0/3</div><div class="pbar"><div class="pfill" id="focus-bar" style="width:0%;background:var(--purple)"></div></div></div>
+          <div class="card-sm"><div class="card-label">Apps sent</div><div class="card-val" id="apps-home">0</div><div style="font-size:12px;color:var(--text3);margin-top:2px">goal: 5/wk</div></div>
+          <div class="card-sm"><div class="card-label">WOW sprint</div><div class="card-val" id="wow-home">0/4</div><div class="pbar"><div class="pfill" id="wow-bar" style="width:0%;background:var(--teal)"></div></div></div>
+          <div class="card-sm"><div class="card-label">Today's mood</div><div class="card-val" id="mood-home" style="font-size:16px;margin-top:4px">—</div></div>
+        </div>
+
+        <div class="slabel">Top 3 for today</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="task"><input type="checkbox" onchange="updateFocus()"><div><div class="task-text">Send 1 tailored application — Ultrahuman, House of Masaba, or Shadowfax</div><div class="task-meta"><span class="badge b-red">Career</span> Your most important financial action right now</div></div></div>
+          <div class="task"><input type="checkbox" onchange="updateFocus()"><div><div class="task-text">Unblock one WOW issue — pick the smallest open bug or Tina feature</div><div class="task-meta"><span class="badge b-green">WOW</span> Momentum beats perfection</div></div></div>
+          <div class="task"><input type="checkbox" onchange="updateFocus()"><div><div class="task-text">Eat one real meal — healthy snack prepped before you smoke</div><div class="task-meta"><span class="badge b-amber">Health</span> Break the smoke → junk loop</div></div></div>
+        </div>
+
+        <div class="slabel">What's blocking you right now?</div>
+        <div class="card" style="margin-bottom:12px">
+          <select id="bottleneck-sel" style="width:100%;margin-bottom:10px">
+            <option>Activation — I know what to do but can't start</option>
+            <option>Clarity — I don't know what to prioritize</option>
+            <option>Emotional spiral — something is draining me</option>
+            <option>Technical block on WOW</option>
+            <option>Interview prep paralysis</option>
+            <option>Scrolling / phone loop</option>
+          </select>
+          <button class="btn btn-primary" onclick="handleBottleneck()">Get unstuck with Claude ↗</button>
+        </div>
+
+        <div class="slabel">Quick actions</div>
+        <a href="https://claude.ai/new?q=I+need+to+write+a+tailored+outreach+message+for+a+founder%27s+office+or+strategy+role.+Help+me+make+it+punchy%2C+memorable%2C+and+sound+like+me+%E2%80%94+Himja+Behl%2C+24%2C+builder+from+Delhi+with+WOW+app%2C+Groyyo%2C+and+founder+exposure." target="_blank" class="action-link">Write outreach for a role ↗</a>
+        <a href="https://claude.ai/new?q=I%27m+working+on+WOW+app+%E2%80%94+an+AI+wardrobe+and+styling+app.+I+have+a+bug+or+feature+to+unblock.+Give+me+step-by-step%2C+exact%2C+minimally+invasive+fixes.+I%27ll+describe+what%27s+broken." target="_blank" class="action-link">Unblock a WOW issue ↗</a>
+        <a href="https://claude.ai/new?q=I+feel+like+I%27m+about+to+spiral+or+avoid+the+important+stuff.+Give+me+a+5-minute+grounding+reset+and+one+concrete+first+action." target="_blank" class="action-link">I'm avoiding something — reset me ↗</a>
+      </div>
+
+      <!-- CAREER -->
+      <div id="career" class="section">
+        <div class="page-title">Career</div>
+        <div class="page-sub">Land a founder's office or strategy role. You build. Make them see it.</div>
+
+        <div class="slabel">Active pipeline</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="app-row"><span class="app-name">Ultrahuman</span><select onchange="updateStage(this,'uh')"><option>Researching</option><option>Drafting</option><option>Applied</option><option>Followed up</option><option>Interview</option><option>Offer</option></select><span class="badge b-blue" id="uh-stage">Researching</span></div>
+          <div class="app-row"><span class="app-name">House of Masaba</span><select onchange="updateStage(this,'hm')"><option>Researching</option><option>Drafting</option><option>Applied</option><option>Followed up</option><option>Interview</option><option>Offer</option></select><span class="badge b-pink" id="hm-stage">Researching</span></div>
+          <div class="app-row"><span class="app-name">Shadowfax AI Labs</span><select onchange="updateStage(this,'sf')"><option>Researching</option><option>Drafting</option><option>Applied</option><option>Followed up</option><option>Interview</option><option>Offer</option></select><span class="badge b-amber" id="sf-stage">Researching</span></div>
+          <div class="app-row"><span class="app-name">HexaHealth</span><select onchange="updateStage(this,'hx')"><option>Researching</option><option>Drafting</option><option>Applied</option><option>Followed up</option><option>Interview</option><option>Offer</option></select><span class="badge b-blue" id="hx-stage">Researching</span></div>
+          <div class="app-row"><span class="app-name">Mosaic Fellowship</span><select onchange="updateStage(this,'ms')"><option>Researching</option><option>Drafting</option><option>Applied</option><option>Followed up</option><option>Interview</option><option>Offer</option></select><span class="badge b-purple" id="ms-stage">Researching</span></div>
+          <div id="extra-companies"></div>
+          <div class="btn-row">
+            <button class="btn" onclick="incr('apps-home')">+ Application sent</button>
+            <button class="btn" onclick="addCompany()">+ Add company</button>
+          </div>
+        </div>
+
+        <div class="slabel">Interview prep bank</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="task"><input type="checkbox"><div><div class="task-text">"Tell me about yourself" — 60s, founder-energy framing</div><div class="task-meta">Groyyo → WOW → what I'm building now</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Why founder's office / why this specific company</div><div class="task-meta">Tailor per application — don't reuse generic answer</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">A time I handled ambiguity or moved fast without clarity</div><div class="task-meta">Wedding execution story or Groyyo receivables/liquidation story</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">What are you building? — tight, practiced, confident WOW answer</div><div class="task-meta">One sentence product. One sentence why it matters. One sentence where it is.</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Pre-call grounding ritual — 5 min before every interview</div><div class="task-meta">Breathe. Say your story out loud once. Remember: you've executed hard things.</div></div></div>
+        </div>
+
+        <div class="slabel">Your positioning — read this before every application</div>
+        <div class="identity-quote">"I build. I've had founder-level exposure — strategy, ops, execution, hiring, chaos. I'm AI-native. I can go from idea to working prototype. I'm not looking for a job that boxes me in. I'm looking for one that needs someone who figures things out."</div>
+
+        <div class="slabel">Career tools</div>
+        <a href="https://claude.ai/new?q=I+have+an+interview+coming+up+and+I+go+blank+under+pressure.+Help+me+practice+%E2%80%94+ask+me+interview+questions+for+a+founder%27s+office+%2F+chief+of+staff+role+one+by+one+and+give+me+honest+feedback." target="_blank" class="action-link">Practice interview with Claude ↗</a>
+        <a href="https://claude.ai/new?q=Help+me+write+my+LinkedIn+summary.+I%27m+Himja+Behl+%E2%80%94+24%2C+Delhi.+Background%3A+Groyyo%2C+Purple+Style+Labs%2C+Singapore+Angel+Network.+Building+WOW+%E2%80%94+AI+wardrobe+app.+Make+it+punchy%2C+original%2C+sounds+like+me%2C+not+corporate." target="_blank" class="action-link">Rewrite my LinkedIn ↗</a>
+        <a href="https://claude.ai/new?q=I+want+to+tailor+my+background+narrative+for+a+specific+company+and+role.+I%27m+Himja+Behl+%E2%80%94+builder%2C+Groyyo+founder%27s+office%2C+WOW+app.+I%27ll+tell+you+the+company+and+role." target="_blank" class="action-link">Tailor my story for a role ↗</a>
+      </div>
+
+      <!-- WOW APP -->
+      <div id="wow" class="section">
+        <div class="page-title">WOW app</div>
+        <div class="page-sub">What. Outfit. When. — Tina decides. You refine.</div>
+
+        <div class="grid2" style="margin-bottom:12px">
+          <div class="card"><div class="card-label">Sprint progress</div><div class="card-val" id="wow-sprint-val">0/4</div><div class="pbar"><div class="pfill" id="wow-sprint-bar" style="width:0%;background:var(--teal)"></div></div></div>
+          <div class="card"><div class="card-label">Tina agent</div><div style="font-size:15px;font-weight:500;margin-top:4px">In progress</div><div style="font-size:12px;color:var(--text3);margin-top:2px">AI stylist — the heart of WOW</div></div>
+        </div>
+
+        <div class="slabel">Current sprint</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="task"><input type="checkbox" onchange="updateWow()"><div><div class="task-text">Fix outfit suggestion repeating items bug</div><div class="task-meta"><span class="badge b-red">Bug</span> include_staples / include_wardrobe logic</div></div></div>
+          <div class="task"><input type="checkbox" onchange="updateWow()"><div><div class="task-text">Multi-item image detection + cropping flow</div><div class="task-meta"><span class="badge b-amber">Feature</span> Ximilar integration</div></div></div>
+          <div class="task"><input type="checkbox" onchange="updateWow()"><div><div class="task-text">Tina: surface one outfit on open — "I already decided for you"</div><div class="task-meta"><span class="badge b-purple">Product</span> Reduce cognitive load, Tina decides first</div></div></div>
+          <div class="task"><input type="checkbox" onchange="updateWow()"><div><div class="task-text">Gender filtering — clean across all suggestion flows</div><div class="task-meta"><span class="badge b-blue">QA</span></div></div></div>
+          <div id="extra-wow-tasks"></div>
+          <div class="btn-row"><button class="btn" onclick="addWowTask()">+ Add sprint task</button></div>
+        </div>
+
+        <div class="slabel">Tina's product principles</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="sprint-item">Tina decides first. User refines — never creates from scratch.</div>
+          <div class="sprint-item">One outfit shown on load. No grid of options.</div>
+          <div class="sprint-item">Minimize friction at every step — no unnecessary inputs.</div>
+          <div class="sprint-item">Feedback loop teaches taste — Tina gets smarter per user.</div>
+        </div>
+
+        <div class="slabel">Tech stack</div>
+        <div class="pill-row">
+          <span class="pill on">React</span><span class="pill on">Firebase Auth</span><span class="pill on">Firestore</span><span class="pill on">Firebase Storage</span><span class="pill on">Node/Express</span><span class="pill on">OpenAI</span><span class="pill on">Ximilar</span><span class="pill on">OpenWeather</span><span class="pill">LangChain</span><span class="pill">Supabase</span>
+        </div>
+
+        <div class="slabel">WOW tools</div>
+        <a href="https://claude.ai/new?q=I%27m+working+on+WOW+app+%E2%80%94+AI+wardrobe+and+styling+app+with+Tina+as+the+AI+stylist.+I+have+a+bug+or+feature+to+work+on.+Give+me+step-by-step%2C+exact%2C+minimally+invasive+fixes.+I%27ll+describe+what%27s+broken." target="_blank" class="action-link">Debug / build something in WOW ↗</a>
+        <a href="https://claude.ai/new?q=Help+me+think+through+Tina+%E2%80%94+the+AI+stylist+in+WOW.+Core+principle%3A+Tina+decides+first%2C+user+refines.+How+should+Tina+present+outfits%2C+handle+feedback%2C+and+get+smarter+over+time%3F" target="_blank" class="action-link">Think through Tina with Claude ↗</a>
+        <a href="https://claude.ai/new?q=Help+me+write+a+sharp+product+brief+for+WOW+app+%E2%80%94+What.+Outfit.+When.+Include%3A+product+concept%2C+AI+stylist+Tina%2C+key+flows%2C+why+it+matters.+Should+work+as+a+pitch+doc." target="_blank" class="action-link">Write WOW product brief ↗</a>
+      </div>
+
+      <!-- PROJECTS -->
+      <div id="projects" class="section">
+        <div class="page-title">Project lab</div>
+        <div class="page-sub">AdDNA, Invoice Audit, and whatever comes next.</div>
+
+        <div class="grid2" style="margin-bottom:12px">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:500;font-size:15px">AdDNA</div><span class="badge b-amber">Exploring</span></div>
+            <div style="font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:10px">Creative intelligence for ads. What makes them convert. Hook → script → creative pack → Creatomate render.</div>
+            <a href="https://claude.ai/new?q=I%27m+building+AdDNA+%E2%80%94+creative+intelligence+for+ads.+Encodes+what+makes+ads+convert%2C+generates+scripts%2Fhooks%2C+renders+video+via+Creatomate.+Help+me+with+next+build+step+or+product+direction." target="_blank" class="action-link" style="display:block">Work on AdDNA ↗</a>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:500;font-size:15px">Invoice Audit tool</div><span class="badge b-blue">Active</span></div>
+            <div style="font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:10px">Ingest invoices, detect discrepancies, cross-check GST/rates/contracts. Ops pain → intelligence.</div>
+            <a href="https://claude.ai/new?q=I%27m+building+an+invoice+audit+tool+%E2%80%94+ingests+invoices%2C+detects+discrepancies%2C+checks+GST%2Frates%2Fcontracts.+Help+me+with+next+build+step+or+positioning+for+fellowship%2Fjob+apps." target="_blank" class="action-link" style="display:block">Work on Invoice Audit ↗</a>
+          </div>
+        </div>
+
+        <div class="slabel">Idea bank — capture before it evaporates</div>
+        <div class="card" style="margin-bottom:12px">
+          <textarea class="textarea" id="idea-bank" placeholder="New idea? Drop it here — even half-formed..."></textarea>
+          <a href="https://claude.ai/new?q=I+have+a+raw+idea+I+want+to+think+through.+Help+me+quickly+validate+it+%E2%80%94+what%27s+the+core+insight%2C+who%27s+the+user%2C+what%27s+the+MVP%2C+and+is+there+something+here+worth+building%3F" target="_blank"><button class="btn btn-primary">Think this through with Claude ↗</button></a>
+        </div>
+
+        <a href="https://claude.ai/new?q=Help+me+write+a+fellowship+or+project+submission+for+one+of+my+tools+%E2%80%94+WOW%2C+AdDNA%2C+or+Invoice+Audit.+Should+sound+like+a+builder+who+ships%2C+not+a+student+writing+an+essay." target="_blank" class="action-link">Write a fellowship/project submission ↗</a>
+      </div>
+
+      <!-- HEALTH -->
+      <div id="health" class="section">
+        <div class="page-title">Health</div>
+        <div class="page-sub">Metabolic health, the smoke loop, and daily consistency.</div>
+
+        <div class="slabel">Metabolic tracker</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="health-row"><span>Weight (kg)</span><div style="display:flex;align-items:center;gap:8px"><input type="number" id="weight-in" placeholder="—"><span style="font-weight:500" id="weight-out">—</span><button class="btn" onclick="logHealth('weight')">Log</button></div></div>
+          <div class="health-row"><span>Last HbA1c</span><div style="display:flex;align-items:center;gap:8px"><input type="text" id="hba1c-in" placeholder="e.g. 5.9"><span style="font-weight:500" id="hba1c-out">—</span><button class="btn" onclick="logHealth('hba1c')">Log</button></div></div>
+          <div class="health-row"><span>Doctor follow-up</span><div style="display:flex;align-items:center;gap:8px"><input type="date" id="doc-in"><span style="font-size:13px" id="doc-out">—</span><button class="btn" onclick="logHealth('doc')">Set</button></div></div>
+          <div class="health-row"><span>Medication today</span><div><input type="checkbox" id="med-check" style="width:16px;height:16px;accent-color:var(--purple)"><label for="med-check" style="font-size:13px;margin-left:6px;color:var(--text2)">Taken</label></div></div>
+        </div>
+
+        <div class="slabel">Daily habits</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="task"><input type="checkbox"><div><div class="task-text">Healthy snack prepped before smoking — removes willpower requirement</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Water immediately after smoking — delays hunger 10–15 min</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Move — even a 20-min walk counts</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Phone down by 11pm — no scrolling into 2am</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">One proper meal today — not delivery junk</div></div></div>
+        </div>
+
+        <a href="https://claude.ai/new?q=I+have+prediabetes+concerns+and+am+trying+to+lose+weight.+Create+a+realistic+7-day+meal+plan+for+someone+in+Delhi+%E2%80%94+easy+to+cook%2C+blood-sugar+friendly%2C+no+extreme+dieting." target="_blank" class="action-link">Build my metabolic health plan ↗</a>
+        <a href="https://claude.ai/new?q=I+smoke+and+tend+to+get+the+munchies+and+eat+junk.+Give+me+a+tactical+plan+to+break+this+loop+%E2%80%94+what+to+prep%2C+what+to+eat+instead%2C+how+to+reduce+smoking+gradually+over+30+days." target="_blank" class="action-link">Break the smoke → junk loop ↗</a>
+      </div>
+
+      <!-- EMOTIONAL -->
+      <div id="emotional" class="section">
+        <div class="page-title">Emotional</div>
+        <div class="page-sub">Mood, spirals, self-respect. The inner dashboard.</div>
+
+        <div class="slabel">How are you today?</div>
+        <div class="mood-grid">
+          <button class="mood-btn" onclick="setMood(this,'Fired up')">Fired up</button>
+          <button class="mood-btn" onclick="setMood(this,'Focused')">Focused</button>
+          <button class="mood-btn" onclick="setMood(this,'Flat')">Flat</button>
+          <button class="mood-btn" onclick="setMood(this,'Spiraling')">Spiraling</button>
+          <button class="mood-btn" onclick="setMood(this,'Heavy')">Heavy</button>
+        </div>
+
+        <div class="slabel">Spiral interrupt</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="task"><input type="checkbox"><div><div class="task-text">Name what's actually happening in one sentence</div><div class="task-meta">Not the story. Just the fact.</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Can I act on this right now? If no — put it down. If yes — one action.</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Open WOW or the job doc — do 15 minutes of real work</div><div class="task-meta">Building is your fastest mood reset</div></div></div>
+        </div>
+
+        <div class="slabel">Self-respect check</div>
+        <div class="card" style="margin-bottom:12px">
+          <div style="font-size:14px;padding:9px 0;border-bottom:0.5px solid var(--border)">Am I doing something right now that future-me will be proud of?</div>
+          <div style="font-size:14px;padding:9px 0;border-bottom:0.5px solid var(--border)">Is this situation energizing me or draining me?</div>
+          <div style="font-size:14px;padding:9px 0">Am I acting from strength or from fear / need for validation?</div>
+        </div>
+
+        <div class="slabel">Today's emotional note</div>
+        <textarea class="textarea" placeholder="What's actually going on? Unfiltered."></textarea>
+        <a href="https://claude.ai/new?q=I%27m+in+a+bit+of+an+emotional+spiral+or+feeling+drained.+Help+me+ground+myself+%E2%80%94+not+with+toxic+positivity%2C+but+honest%2C+practical+perspective.+I%27ll+tell+you+what%27s+going+on." target="_blank" class="action-link">Talk it through with Claude ↗</a>
+      </div>
+
+      <!-- IDENTITY -->
+      <div id="identity" class="section">
+        <div class="page-title">Identity</div>
+        <div class="page-sub">Who you are. What you stand for. What gives you strength.</div>
+
+        <div class="slabel">The one-liner</div>
+        <div class="identity-quote">"High-agency, taste-driven, emotionally intense builder. Creates beautiful useful things. Wants to be taken seriously for execution and intelligence. Not conventional. Expanding."</div>
+
+        <div class="slabel">What gives you identity-strength</div>
+        <div class="card" style="margin-bottom:12px">
+          <div style="font-size:14px;padding:9px 0;border-bottom:0.5px solid var(--border)">Building WOW — going from idea to working AI product</div>
+          <div style="font-size:14px;padding:9px 0;border-bottom:0.5px solid var(--border)">Organizing and executing your brother's wedding</div>
+          <div style="font-size:14px;padding:9px 0;border-bottom:0.5px solid var(--border)">Handling ambiguity at Groyyo — receivables, ops, liquidation, hiring</div>
+          <div style="font-size:14px;padding:9px 0">Knowing what good taste looks like — and building toward it</div>
+        </div>
+
+        <div class="slabel">Values</div>
+        <div class="pill-row">
+          <span class="pill on">Agency</span><span class="pill on">Creativity</span><span class="pill on">Taste</span><span class="pill on">Competence</span><span class="pill on">Ambition</span><span class="pill on">Truthfulness</span><span class="pill on">Independence</span><span class="pill on">Depth</span>
+        </div>
+
+        <div class="slabel">Your personal constitution</div>
+        <textarea class="textarea" style="min-height:120px" placeholder="Write your operating principles here. e.g. I build before I theorize. I don't shrink in rooms where I belong. I choose expansion over smallness..."></textarea>
+        <a href="https://claude.ai/new?q=Help+me+write+my+personal+constitution+%E2%80%94+core+operating+principles.+I%27m+Himja%3A+24%2C+builder%2C+founder-energy%2C+Delhi.+Values%3A+agency%2C+taste%2C+execution%2C+creativity.+Make+it+feel+genuinely+mine%2C+not+generic+self-help." target="_blank" class="action-link">Help me write my constitution ↗</a>
+        <a href="https://claude.ai/new?q=What+kind+of+person+am+I+becoming+right+now%2C+based+on+my+daily+actions%3F+Ask+me+questions+to+help+me+see+clearly+%E2%80%94+not+harshly%2C+but+honestly." target="_blank" class="action-link">Who am I becoming? ↗</a>
+      </div>
+
+      <!-- DAILY ROUTINE -->
+      <div id="routine" class="section">
+        <div class="page-title">Daily routine</div>
+        <div class="page-sub">Your ideal structure. Built around how you actually work.</div>
+
+        <div class="slabel">Ideal day</div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="time-block"><div class="time-lbl">7–8 am</div><div class="time-item">Wake up. No phone for first 20 min. Water + light breakfast.</div></div>
+          <div class="time-block"><div class="time-lbl">8–10 am</div><div class="time-item" style="background:var(--blue-bg);color:var(--blue-text);border-color:transparent">Deep work — job applications, resume, or outreach</div></div>
+          <div class="time-block"><div class="time-lbl">10–11 am</div><div class="time-item" style="background:var(--teal-bg);color:var(--teal-text);border-color:transparent">Exercise or walk. Get outside.</div></div>
+          <div class="time-block"><div class="time-lbl">11am–1pm</div><div class="time-item" style="background:var(--blue-bg);color:var(--blue-text);border-color:transparent">Second work block — WOW, research, networking</div></div>
+          <div class="time-block"><div class="time-lbl">1–2 pm</div><div class="time-item">Proper lunch. Sit down, no phone.</div></div>
+          <div class="time-block"><div class="time-lbl">2–4 pm</div><div class="time-item" style="background:var(--blue-bg);color:var(--blue-text);border-color:transparent">Third block — AdDNA, Invoice Audit, or side project</div></div>
+          <div class="time-block"><div class="time-lbl">4–6 pm</div><div class="time-item">Free time / phone. Earned.</div></div>
+          <div class="time-block"><div class="time-lbl">6–8 pm</div><div class="time-item" style="background:var(--amber-bg);color:var(--amber-text);border-color:transparent">If smoking — healthy snack prepped. No junk delivery.</div></div>
+          <div class="time-block"><div class="time-lbl">8–10 pm</div><div class="time-item">Wind down. Light activity or reading.</div></div>
+          <div class="time-block"><div class="time-lbl">10–11 pm</div><div class="time-item" style="background:var(--teal-bg);color:var(--teal-text);border-color:transparent">In bed. Phone silent. Sleep by 11pm.</div></div>
+        </div>
+
+        <div class="slabel">Focus rules</div>
+        <div class="card">
+          <div class="task"><input type="checkbox"><div><div class="task-text">Phone face-down during all work blocks — no exceptions</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Social media only after 4pm</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">Pomodoro: 25 min work, 5 min break — set timer before starting</div></div></div>
+          <div class="task"><input type="checkbox"><div><div class="task-text">One browser tab during work sessions</div></div></div>
+        </div>
+      </div>
+
+      <!-- WEEKLY REVIEW -->
+      <div id="review" class="section">
+        <div class="page-title">Weekly review</div>
+        <div class="page-sub">5 questions. Every Sunday. 10 minutes max.</div>
+
+        <div class="card" style="margin-bottom:14px">
+          <div style="font-weight:500;font-size:14px;margin-bottom:4px">1. What did I ship or make happen this week?</div>
+          <textarea class="textarea" placeholder="Wins only — big or small"></textarea>
+          <div style="font-weight:500;font-size:14px;margin-bottom:4px">2. What wasted my time or energy?</div>
+          <textarea class="textarea" placeholder="Scrolling, spirals, avoidance — be honest"></textarea>
+          <div style="font-weight:500;font-size:14px;margin-bottom:4px">3. What did I avoid that I know I shouldn't have?</div>
+          <textarea class="textarea" placeholder="Name it specifically"></textarea>
+          <div style="font-weight:500;font-size:14px;margin-bottom:4px">4. Am I becoming the person I want to be?</div>
+          <textarea class="textarea" placeholder="One paragraph, no filter"></textarea>
+          <div style="font-weight:500;font-size:14px;margin-bottom:4px">5. Three non-negotiables for next week</div>
+          <textarea class="textarea" placeholder="Just 3. Be specific."></textarea>
+          <a href="https://claude.ai/new?q=I+just+finished+my+weekly+review.+Analyse+what+I+wrote+and+extract+my+3+sharpest+action+items%2C+call+out+one+pattern+I+might+be+missing%2C+and+remind+me+what+matters+most+right+now." target="_blank"><button class="btn btn-primary" style="margin-top:4px">Analyse with Claude ↗</button></a>
+        </div>
+
+        <div class="slabel">90-day horizon</div>
+        <div class="grid2">
+          <div class="horizon-card"><div class="hz-label">Career</div><div class="hz-val">Land a founder's office / strategy role</div></div>
+          <div class="horizon-card"><div class="hz-label">WOW</div><div class="hz-val">Tina working end-to-end on real wardrobe</div></div>
+          <div class="horizon-card"><div class="hz-label">Health</div><div class="hz-val">Weight down, HbA1c in control</div></div>
+          <div class="horizon-card"><div class="hz-label">Identity</div><div class="hz-val">Feel like someone who executes, not someone who plans</div></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<style>
+.action-link {
+  display: block;
+  padding: 10px 14px;
+  margin: 5px 0;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 13px;
+  text-decoration: none;
+  transition: all .12s;
+}
+.action-link:hover {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+</style>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
+  });
+  const mbtns = document.querySelectorAll('.mobile-nav button');
+  mbtns.forEach(b => { if (b.getAttribute('onclick') && b.getAttribute('onclick').includes("'"+id+"'")) b.classList.add('active'); });
+}
+
+function updateFocus() {
+  const total = document.querySelectorAll('#home .task input[type=checkbox]').length;
+  const done = document.querySelectorAll('#home .task input[type=checkbox]:checked').length;
+  document.getElementById('focus-val').textContent = done + '/' + total;
+  document.getElementById('focus-bar').style.width = Math.round((done/total)*100) + '%';
+}
+
+function updateWow() {
+  const boxes = document.querySelectorAll('#wow .task input[type=checkbox]');
+  const done = document.querySelectorAll('#wow .task input[type=checkbox]:checked').length;
+  const total = boxes.length;
+  document.getElementById('wow-home').textContent = done + '/' + total;
+  document.getElementById('wow-bar').style.width = Math.round((done/total)*100) + '%';
+  document.getElementById('wow-sprint-val').textContent = done + '/' + total;
+  document.getElementById('wow-sprint-bar').style.width = Math.round((done/total)*100) + '%';
+}
+
+function incr(id) {
+  const el = document.getElementById(id);
+  el.textContent = parseInt(el.textContent) + 1;
+}
+
+const stageColors = { Researching:'b-blue', Drafting:'b-amber', Applied:'b-purple', 'Followed up':'b-green', Interview:'b-pink', Offer:'b-green' };
+function updateStage(sel, prefix) {
+  const val = sel.value;
+  const badge = document.getElementById(prefix + '-stage');
+  if (badge) { badge.textContent = val; badge.className = 'badge ' + (stageColors[val] || 'b-blue'); }
+}
+
+function setMood(btn, mood) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('mood-home').textContent = mood;
+}
+
+function logHealth(type) {
+  const map = { weight: ['weight-in','weight-out'], hba1c: ['hba1c-in','hba1c-out'], doc: ['doc-in','doc-out'] };
+  const [inp, out] = map[type];
+  const v = document.getElementById(inp).value;
+  if (v) document.getElementById(out).textContent = v;
+}
+
+function addCompany() {
+  const name = prompt('Company name?');
+  if (!name) return;
+  const key = name.replace(/\s/g,'').toLowerCase().substring(0,5) + Date.now();
+  const row = document.createElement('div');
+  row.className = 'app-row';
+  row.innerHTML = `<span class="app-name">${name}</span><select onchange="updateStage(this,'${key}')"><option>Researching</option><option>Drafting</option><option>Applied</option><option>Followed up</option><option>Interview</option><option>Offer</option></select><span class="badge b-blue" id="${key}-stage">Researching</span>`;
+  document.getElementById('extra-companies').appendChild(row);
+}
+
+function addWowTask() {
+  const txt = prompt('Sprint task?');
+  if (!txt) return;
+  const div = document.createElement('div');
+  div.className = 'task';
+  div.innerHTML = `<input type="checkbox" onchange="updateWow()" style="margin-top:3px;flex-shrink:0;cursor:pointer;accent-color:var(--purple);width:15px;height:15px"><div><div class="task-text">${txt}</div></div>`;
+  document.getElementById('extra-wow-tasks').appendChild(div);
+  updateWow();
+}
+
+function handleBottleneck() {
+  const val = document.getElementById('bottleneck-sel').value;
+  const prompts = {
+    'Activation — I know what to do but can\'t start': 'I know what I need to do but I can\'t activate. Give me a 5-minute on-ramp — a tiny first action that gets me moving on my most important task.',
+    'Clarity — I don\'t know what to prioritize': 'I feel scattered. Ask me what\'s on my plate and help me pick the one thing that moves the needle most right now.',
+    'Emotional spiral — something is draining me': 'I\'m in an emotional spiral and it\'s killing my productivity. Help me ground out — not toxic positivity, just honest perspective.',
+    'Technical block on WOW': 'I\'m blocked on something in the WOW app. Let\'s unblock it step by step — I\'ll describe what\'s broken.',
+    'Interview prep paralysis': 'I have an interview coming and I feel paralyzed. Let\'s do a quick prep session — ask me practice questions one at a time.',
+    'Scrolling / phone loop': 'I\'ve been scrolling for too long. Give me a 2-minute reset and one concrete thing to open and work on.'
+  };
+  const q = encodeURIComponent(prompts[val] || 'Help me get unstuck right now.');
+  window.open('https://claude.ai/new?q=' + q, '_blank');
+}
+</script>
+</body>
+</html>
